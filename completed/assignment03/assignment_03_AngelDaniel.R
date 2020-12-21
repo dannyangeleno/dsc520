@@ -1,6 +1,6 @@
 # Assignment: ASSIGNMENT 3
 # Name: Daniel, Angel
-# Date: 2010-12-13
+# Date: 2020-12-20
 
 ## Load the ggplot2 package
 library(ggplot2)
