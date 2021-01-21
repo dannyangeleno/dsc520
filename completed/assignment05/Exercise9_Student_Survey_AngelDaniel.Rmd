@@ -1,0 +1,83 @@
+---
+title: "Exercise 9 : Student Survey"
+author: "Daniel Angel"
+date: January 17, 2021
+output: 
+  pdf_document: default
+bibliography: bibliography.bib
+---
+
+*As a data science intern with newly learned knowledge in skills in statistical correlation and R programming, you will analyze the results of a survey recently given to college students. You learn that the research question being investigated is: “Is there a significant relationship between the amount of time spent reading and the time spent watching television?” You are also interested if there are other significant relationships that can be discovered? The survey data is located in this StudentSurvey.csv file.*
+```{r include=FALSE}
+library(pander)
+library(knitr)
+library(ggplot2)
+library(ggm)
+library(ppcor)
+theme_set(theme_minimal())
+surv <- read.csv('student-survey.csv')
+tr <- surv$TimeReading
+tt <- surv$TimeTV
+hap <- surv$Happiness
+gen <- surv$Gender
+```
+
+```{r, echo = FALSE}
+      kable(surv, align = "c", caption = "Student Survey Responses")
+```
+
+
+* A.    Use R to calculate the covariance of the Survey variables and provide an explanation of why you would use this calculation and what the results indicate.
+```{r, echo = FALSE}
+      kable (cov(surv), caption = "Covariance Matrix")
+
+```
+**Covariance is a calculation which indicates how one variables varies compared to another. Negative covariation indicates that as one variable increases the other will decrease and vice versa. A positive covariation means that as one variable increases or decreases the other will increase or decrease accordingly.**
+
+* B.    Examine the Survey data variables. What measurement is being used for the variables? Explain what effect changing the measurement being used for the variables would have on the covariance calculation. Would this be a problem? Explain and provide a better alternative if needed.
+
+**It appears that the "Time (spent) Reading" variable is measured in hours whereas "Time (spent watching) TV" is given in minutes. The happiness score appears to be on a 1-100 scale. Lastly, the gender is a binary measurement with a value of 1 corresponding to one gender and a value of 0 corresponding to the other.  The difference between the measurement of hours or minutes between TimeReading and TimeTV would make interpreting the covariance slightly more challenging. A solution would be scaling Reading to minutes, multiply values by 60, or TV to hours, divide by 60, would give us two variables measured on the scale. This would allow us to compare the covariances directly instead of trying to compare apples to oranges.**
+
+* C.    Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yields a positive or negative correlation?
+
+**Pearson's Correlation Test is my chosen method. I chose this because it is the default method when performing correlation tests in R. I predict that the parity(whether it is positive or negative) will directly correspond with the parity of the values of the covariance coefficient. Negative covariances will have negative correlation and positives will have have positive.**
+
+* D. Perform a correlation analysis of:
+  + i.  All variables
+```{r, echo = FALSE}
+      pander(cor(surv, method = 'pearson'))
+```
+  + ii.  A single correlation between two a pair of the variables
+```{r, echo = FALSE}
+      cor.test(x = tr, y = tt, method = 'pearson')
+```
+  + iii.  Repeat your correlation test in step 2 but set the confidence interval at 99%
+```{r, echo = FALSE}
+      cor.test(x = tr, y = tt, method = 'pearson', conf.level = .99)
+```
+  + iv.  Describe what the calculations in the correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+  
+  **TimeTV and TimeReading have a strong negative relationship. TimeReading has a weak negative relationship with Happiness. Finally, TimeTV and Happiness have a positive relationship. The relationships between Gender and the other variables is very weak and therefore practically non-existent. A positive relationship implies that as one variable increases or decreases the other does as well. A negative relationship implies that when one variable increases or decreases the other does the opposite.**
+  
+* E.    Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+
+```{r, echo = FALSE}
+    pander(cor(surv), caption = "Correlation Coefficient")
+    pander(cor(surv)^2, caption = "Coefficient of Determination")
+```
+**My conclusions for the correlation coefficients are the same as my responses in Question D part iv. With resepct to the coefficient of determination my conclusions would be based on the commonly accepted interpretation of the coefficient of determination. The coefficient of determination is widely understood or viewed as a measure of how well data fits a linear model. The most significant result is the ~78% coefficient of determination between the Reading and TV time variables. This would cause me to have a large amount of confidence in the correlation calculation of those two variables.**
+
+* F.    Based on your analysis can you say that watching more TV caused students to read less? Explain.
+
+**Based on my analysis, watching TV gave students less time to read and vice versa. This is due to the negative correlation. It is also possible that increased time spent reading led to decreased time for watching TV and because the potential source of the effect could be on either end of this two way street we can't definitively say that one caused the other but we can say with a fair amount of certainty that there is some type of causal relationship beyond simple coincidence. The p-value being lower than .05 and the similarity of results across multiple methods and tests along with the over .80 correlation and the ~80% coefficient of determination causes me to pretty sure about the conclusion of my analysis based upon the results of my calculations.**
+
+* G.    Pick three variables and perform a partial correlation, documenting which variable you are “controlling”. Explain how this changes your interpretation and explanation of the results.
+```{r, echo =FALSE, warning=FALSE}
+namess = c("Time Reading", "Time Watching TV", "Happiness score")
+partdf <- data.frame(tt, tr, hap)
+names(partdf) <- namess
+partcor <- pcor(partdf)
+pander(partcor$estimate, caption =" Partial Correlation Estimate controlled for Gender")
+```
+
+**I controlled for gender, effectively removing it from the equation. Normally, this creates a hypothetical scenario where you can test for the correlation of two or more variables while keeping one constant. However, in this case it doesn't really affect my results because the gender variable didn't have strong correlations anyways and the before numbers are very similar to the after numbers.**
