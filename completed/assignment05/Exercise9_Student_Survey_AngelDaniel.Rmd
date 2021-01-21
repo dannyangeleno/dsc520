@@ -65,6 +65,7 @@ gen <- surv$Gender
     pander(cor(surv), caption = "Correlation Coefficient")
     pander(cor(surv)^2, caption = "Coefficient of Determination")
 ```
+
 **My conclusions for the correlation coefficients are the same as my responses in Question D part iv. With resepct to the coefficient of determination my conclusions would be based on the commonly accepted interpretation of the coefficient of determination. The coefficient of determination is widely understood or viewed as a measure of how well data fits a linear model. The most significant result is the ~78% coefficient of determination between the Reading and TV time variables. This would cause me to have a large amount of confidence in the correlation calculation of those two variables.**
 
 * F.    Based on your analysis can you say that watching more TV caused students to read less? Explain.
