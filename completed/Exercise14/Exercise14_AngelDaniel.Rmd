@@ -1,0 +1,83 @@
+---
+title: "Exercise 14: Fit a Logistic Regression Model to Previous Dataset "
+author: "Daniel Angel"
+date: 2/7/2021
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+library(caTools)
+library(ggplot2)
+library(class)
+```
+
+## Logistic Regression
+
+First I must load my data in then split it into two subsets of data according to a 4 to 1 ratio for training to testing, then I use that trained model to make predictions which I will test for accuracy against the original training data.
+
+```{r, echo=FALSE}
+setwd("C:/Users/Danny/Documents")
+bin_class_df <- read.csv("data/binary-classifier-data.csv")
+splits <- sample.split(bin_class_df, SplitRatio = 0.8)
+trainer <- subset(bin_class_df, splits == "TRUE")
+tester <- subset(bin_class_df, splits == "FALSE")
+bin_class_df$label <- as.factor(bin_class_df$label)
+glm_bin <- glm(label ~ x + y, data = trainer, family = "binomial")
+resp <- predict(glm_bin, tester, type = "response")
+resp <- predict(glm_bin, trainer, type = "response")
+confmatrix <- table(Actual_Value=trainer$label, Predicted_Value = resp > 0.5)
+confmatrix
+accuracy <- (confmatrix[1,1] + confmatrix[2,2]) / sum(confmatrix)
+accuracy
+```
+ 
+A. What is the accuracy of the logistic regression classifier?
+  
+**The accuracy is** `r accuracy*100` **percent.**
+
+
+## Nearest Neighbor 
+
+B. How does the accuracy of the logistic regression classifier compare to the nearest neighbors algorithm?
+
+```{r , echo=FALSE}
+library(ggplot2)
+ggplot(data = bin_class_df, aes(x = x, y = y, color = label)) + geom_point() + ggtitle("K Nearest Neighbors")
+```
+
+Above we can see that there is natural clustering in this data set. 
+
+I will try k=10 for my number of clusters and also k = 38 as the square root of the number of observations.
+
+```{r, echo=FALSE}
+
+knn10 <- knn(trainer[2:3], tester[2:3], trainer$label, k = 10)
+tab10 <- table(knn10, tester$label)
+tab10
+acc10 <- (tab10[1,1]+tab10[2,2])/sum(tab10)
+acc10
+
+knn38 <- knn(trainer[2:3], tester[2:3], trainer$label, k = 38)
+tab38 <- table(knn38, tester$label)
+tab38
+acc38 <- (tab38[1,1]+tab38[2,2])/sum(tab38)
+acc38
+```
+
+Despite less clusters the KNN Model for k = 10 had the highest accuracy at a whopping `r acc10*100` percent. This is significantly better than the approximately 58% achieved by the logistic regression.
+
+## Comparing the Models
+
+C. Why is the accuracy of the logistic regression classifier different from that of the nearest neighbors?
+```{r , echo=FALSE}
+bin_class_df$predict <- predict(glm_bin, bin_class_df,type = "response")
+
+ggplot(data = bin_class_df, aes(y = y, x = x, color = predict>0.5)) + 
+  geom_point() + ggtitle("Logistic Regression")
+```
+
+Comparing this to the plot above you can see that the logistic regression classifier is not well suited to classifying which is so scattered and further it is obvious to see why it would be beaten by a clustering algorithm when the data is already somewhat naturally clustered.
