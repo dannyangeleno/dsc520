@@ -1,0 +1,121 @@
+---
+title: "Exercise 13"
+author: "Daniel Angel"
+date: February 7, 2020
+output: 
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Fit a Logistic Regression Model to the Thoracic Surgery Binary Dataset
+
+Problem Statement : For this problem, you will be working with the thoracic surgery data set from the University of California Irvine machine learning repository. This dataset contains information on life expectancy in lung cancer patients after surgery.
+
+The underlying thoracic surgery data is in ARFF format. This is a text-based format with information on each of the attributes. You can load this data using a package such as foreign or by cutting and pasting the data section into a CSV file.
+
+### Data Set Information (From UCI website)
+
+"The data was collected retrospectively at Wroclaw Thoracic Surgery Centre for patients who underwent major lung resections for primary lung cancer in the years 2007â€“2011. The Centre is associated with the Department of Thoracic Surgery of the Medical University of Wroclaw and Lower-Silesian Centre for Pulmonary Diseases, Poland, while the research database constitutes a part of the National Lung Cancer Registry, administered by the Institute of Tuberculosis and Pulmonary Diseases in Warsaw, Poland."
+
+```{r echo=TRUE, include=TRUE}
+## Set working directory to root of your directory
+setwd("C:/Users/Danny/Documents")
+
+## Load the `foreign` library
+library(foreign)
+
+## Load the UC Irvine data set
+thor_surg_df <- read.arff('data/ThoraricSurgery.arff')
+head(thor_surg_df)
+  
+```
+Variable/Contributing Factors Details:
+
+1. DGN: Diagnoses - combination of ICD-10 codes for primary and secondary and multiple tumors if applicable (DGN1-DGN6, DGN8)
+2. PRE4: Forced vital capacity - FVC (Range is 1-6.5)
+3. PRE5: Volume at end of the 1st second of forced exhalation - FEV1 (Range 0-90)
+4. PRE6: Performance on Zubrod scale (PRZ2,PRZ1,PRZ0)
+5. PRE7: Pain prior to surgery (True,False)
+6. PRE8: Haemoptysis (Coughing up blood) prior to surgery (True,False)
+7. PRE9: Dyspnoea (Difficulty Breathing / Shortness of Breath) prior to surgery (True,False)
+8. PRE10: Cough prior to surgery (True,False)
+9. PRE11: Weakness prior to surgery (True,False)
+10. PRE14: Size of original tumor, from OC11 (smallest) to OC14 (largest)
+11. PRE17: Type 2 Diabetes - diabetes mellitus (True,False)
+12. PRE19: MI up to 6 months (True,False)
+13. PRE25: PAD - Peripheral Arterial Diseases (True,False)
+14. PRE30: Smoker (True,False)
+15. PRE32: Asthma (True,False)
+16. AGE: Age at surgery (In years, Range 20-90)
+17. Risk1Y: 1 year survival period - (T)rue value if patient passed, (F)alse if still alive
+
+
+## a. Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the Risk1Y variable) after the surgery. Use the glm() function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the summary() function in your results.
+
+```{r echo=TRUE, include=TRUE}
+
+
+# This model includes all other parameters as dependent
+lm1 <- glm(Risk1Yr ~ . , family ='binomial' , data = thor_surg_df)
+summary(lm1)
+
+# Trying out another model 
+# This model includes only DGN, Smoking, and Forced Exhale Volume as dependent
+lm2 <- glm(Risk1Yr ~ DGN + PRE5 + PRE30, family ='binomial' , data = thor_surg_df)
+summary(lm2)
+
+#Using info from the first linear model summary, focus this model to be dependent on only those factors which are most significant
+lm3 <- glm(Risk1Yr ~ PRE9 + PRE14 + PRE30 + PRE17  , family ='binomial' , data = thor_surg_df)
+summary(lm3)
+
+```
+
+## b. According to the summary, which variables had the greatest effect on the survival rate?
+
+Based on the summary of the first linear model which viewed all variables, only four variables had a p-value less than .05 which are in order of significance - ___PRE9, PRE14, PRE30, and PRE17___. A fifth variable, PRE5 is close to the level of significance which I seek but is slightly above the .05 threshold.
+
+Therefore, ___Dyspnoea, Tumor Size, Cigarette Smoking, and Diabetes___ are the best factors at predicting if a patient will or will not survive one year post-operation.
+
+## c. To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+
+
+```{r echo=TRUE, include=TRUE}
+
+result1 <- predict(lm1,thor_surg_df,type = "response")
+# Zero is False and non-zero values True so as in the data set true corresponds with someone who died.
+confmatrix1 <- table(ActualValue=thor_surg_df$Risk1Yr, PredictedValue = result1 > 0.5)
+confmatrix1
+
+acc1 <- (confmatrix1[1,1]+confmatrix1[2,2])/sum(confmatrix1)
+acc1
+
+result2 <- predict(lm2,thor_surg_df,type = "response")
+
+confmatrix2 <- table(ActualValue=thor_surg_df$Risk1Yr, PredictedValue = result2 > 0.5)
+confmatrix2
+
+acc2 <- (confmatrix2[1,1]+confmatrix2[2,2])/sum(confmatrix2)
+acc2
+
+result3 <- predict(lm3,thor_surg_df,type = "response")
+
+confmatrix3 <- table(ActualValue=thor_surg_df$Risk1Yr, PredictedValue = result3 > 0.5)
+confmatrix3
+
+acc3 <- (confmatrix3[1,1]+confmatrix3[2,2])/sum(confmatrix3)
+acc3
+```
+
+***I tested all 3 models and all of them under-predicted deaths. The first used all variables and was 83.6% accurate, the second focused on 3 variables and was 85.7% accurate, and the third used those four variables which were most significant from part B and was 84.4% accurate. *** 
+
+The second model was the most accurate and the only one to have better than 50% odds of being correct when it predicts a death; although viewed another way it was only able to predict 10% of all deaths.
+
+The third model was overly optimistic and so although it correctly predicted the same amount of survivors as the 2nd it vastly underestimated the number of patients who would perish. Sometimes you must weigh your options considering the preference for tending towards more false positives or more false negatives.
+
+The accuracy data for all was skewed by the fact that not many patients in the data set died, around fifteen percent.
+
+It is interesting that cherry picking your variables as was the case in the 3rd model did not actually yield the best results but a combination of the obvious and not created the superior model. All of the models would have been improved by a larger training data set or a data set which included more people who would end up passing away a year after the surgery.
