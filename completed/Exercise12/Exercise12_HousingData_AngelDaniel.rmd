@@ -1,0 +1,187 @@
+---
+title: "Exercise 12 - Housing Data"
+author: "Daniel Angel"
+date: '2021-1-31'
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+Work individually on this assignment. You are encouraged to collaborate on ideas and strategies pertinent to this assignment. Data for this assignment is focused on real estate transactions recorded from 1964 to 2016 and can be found in Week 6 Housing.xlsx. Using your skills in statistical correlation, multiple regression and R programming, you are interested in the following variables: Sale Price and several other possible predictors.
+
+```{r,  warning=FALSE, include = FALSE} 
+library(knitr)
+library(ggplot2)
+library(GGally)
+library(readxl)
+library(dplyr)
+library(lm.beta)
+library(tidyverse)
+library(Rcmdr)
+library(QuantPsyc)
+
+setwd("C:/Users/Danny/Documents")
+housing_df <-read_xlsx("data/week-6-housing.xlsx")
+head(housing_df)
+str(housing_df)
+
+clean_housing_df <- housing_df[(is.na(housing_df$sale_warning))& (housing_df$bedrooms != 0) & (housing_df$bath_full_count < 20) & (housing_df$building_grade < 11) & (housing_df$building_grade > 4),]
+clean_housing_df$`Sale Date` <- NULL
+clean_housing_df$sale_reason <- NULL
+clean_housing_df$sale_instrument <- NULL
+clean_housing_df$sale_warning <- NULL
+clean_housing_df$sitetype <- NULL
+clean_housing_df$addr_full <- NULL
+clean_housing_df$ctyname <- NULL
+clean_housing_df$postalctyn <- NULL
+clean_housing_df$lon <- NULL
+clean_housing_df$lat <- NULL
+clean_housing_df$year_renovated <- NULL
+clean_housing_df$current_zoning <- NULL
+clean_housing_df$prop_type <- NULL
+clean_housing_df$present_use <- NULL
+clean_housing_df$zip5 <- as.character(clean_housing_df$zip5)
+cbind(clean_housing_df, total_bath=0)
+clean_housing_df$total_bath <- clean_housing_df$bath_full_count + .5*clean_housing_df$bath_half_count + .75*clean_housing_df$bath_3qtr_count
+clean_housing_df$bath_full_count <- NULL
+clean_housing_df$bath_half_count <- NULL
+clean_housing_df$bath_3qtr_count <- NULL
+clean_housing_df <- clean_housing_df[(clean_housing_df$total_bath!=0),]
+str(clean_housing_df)
+
+```
+## a) Explain why you chose to remove data points from your ‘clean’ dataset.
+I first removed obvious outliers or potential problem data points which in my eyes were sales that had zero bedrooms, sales that had a non-empty 'Sale Warning' entry, and sales with excessive bathrooms(over 20) or no bathrooms. Then, I removed all Character Vectors or Columns which had no potential statistical significance or discernible meaning. Subsequently, I limited building grade to values between 5 and 10. Finally, I converted 5 digit zip codes (Zip5) into a character vector so as not to be confused by any results later on. 
+
+Lastly, I combined the bathroom counts for simplicity's sake.
+
+The result of all these changes are that I reduced my data frame from 12865 objects of 24 variables into a much cleaner 10226 objects of 8 variables.
+
+## b) Create two variables; one that will contain the variables Sale Price and Square Foot of Lot (same variables used from previous assignment on simple regression) and one that will contain Sale Price and several additional predictors of your choice. Explain the basis for your additional predictor selections.
+
+I based my selections on intuition, knowledge of real estate and higher correlation scores.
+
+```{r}
+corr <- cor(subset(clean_housing_df, select = -c(zip5)))
+
+simp_lm <- lm(formula = clean_housing_df$`Sale Price` ~ clean_housing_df$sq_ft_lot, data = clean_housing_df)
+
+mult_lm <- lm(formula = clean_housing_df$`Sale Price` ~ clean_housing_df$square_feet_total_living + clean_housing_df$sq_ft_lot + clean_housing_df$building_grade +  clean_housing_df$bedrooms + clean_housing_df$total_bath, data = clean_housing_df)
+```
+
+
+
+## c) Execute a summary() function on two variables defined in the previous step to compare the model results. What are the R2 and Adjusted R2 statistics? Explain what these results tell you about the overall model. Did the inclusion of the additional predictors help explain any large variations found in Sale Price?
+
+
+```{r}
+summary(simp_lm)
+summary(mult_lm)
+```
+
+The multiple factor model is better the R2 statistics are better and it does help explain some of the large variations in Sale Price.
+
+## d) Considering the parameters of the multiple regression model you have created. What are the standardized betas for each parameter and what do the values indicate?
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE} 
+lm.beta(mult_lm)
+```
+The beta tells us what number or portion of standard deviations the outcome will be altered by the change of one standard deviation in the predicting variable. Based on this, the square footage of the living space and the grade of the building are the best variables that the help the model perform a successful prediction.
+
+## e) Calculate the confidence intervals for the parameters in your model and explain what the results indicate.
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE} 
+confint(mult_lm)
+```
+
+The confidence interval means that at these percentiles the confidence that the model is making a good prediction is within this range sort of like when a survey lists a plus/minus error.
+
+None of these variables are horrible at helping the predictive model but the best are certainly square footage of the living space and the lot size. When the confidence interval is lower it means the value of the beta for the model is close to the actual value of beta from the true data.
+
+## f) Assess the improvement of the new model compared to your original model (simple regression model) by testing whether this change is significant by performing an analysis of variance.
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE} 
+
+anova(simp_lm, mult_lm)
+```
+    
+## g) Perform casewise diagnostics to identify outliers and/or influential cases, storing each function's output in a dataframe assigned to a unique variable name.
+
+```{r}
+# Outliars
+clean_housing_df$residuals <- resid(mult_lm)
+clean_housing_df$standardized.residuals <- rstandard(mult_lm)
+clean_housing_df$studentized.residuals <- rstudent(mult_lm)
+# Influential Cases
+clean_housing_df$cooks.distance <- cooks.distance(mult_lm)
+clean_housing_df$dfbeta <- dfbeta(mult_lm)
+clean_housing_df$dffit <- dffits(mult_lm)
+clean_housing_df$leverage <- hatvalues(mult_lm)
+clean_housing_df$covariance.ratios <- covratio(mult_lm)
+summary(clean_housing_df)
+```
+
+## h) Calculate the standardized residuals using the appropriate command, specifying those that are +-2, storing the results of large residuals in a variable you create.
+
+```{r}
+clean_housing_df$large.residual <- clean_housing_df$standardized.residuals > 2 | clean_housing_df$standardized.residuals < -2
+
+big_boiz <- clean_housing_df$large.residual
+```
+
+## i) Use the appropriate function to show the sum of large residuals.
+
+```{r}
+sum(big_boiz)
+```
+
+## j) Which specific variables have large residuals (only cases that evaluate as TRUE)?
+
+
+```{r echo=TRUE, include=TRUE}
+clean_housing_df[big_boiz, c("Sale Price", "square_feet_total_living", "bedrooms", "building_grade", "total_bath", "sq_ft_lot")]
+```
+## k) Investigate further by calculating the leverage, cooks distance, and covariance rations. Comment on all cases that are problematics.
+
+```{r echo=TRUE, include=TRUE}
+clean_housing_df[big_boiz, c("cooks.distance", "leverage", "covariance.ratios")]
+```
+
+## l) Perform the necessary calculations to assess the assumption of independence and state if the condition is met or not.
+
+```{r echo=TRUE, include=TRUE}
+library(car)
+durbinWatsonTest(mult_lm)
+```
+By the Durbin Watson Test,because the value is in the range of 1 to 3 it is alright.
+
+
+## m) Perform the necessary calculations to assess the assumption of no multicollinearity and state if the condition is met or not.
+
+```{r echo=TRUE, include=TRUE}
+print("Variance inflation factors")
+vif(mult_lm)
+print("Tolerance = 1/Variance inflation factor")
+1/vif(mult_lm)
+print("Mean Variance inflation factor")
+mean(vif(mult_lm))
+```
+
+The largest VIF value is more than 10 and the least more than 0.2. Furthermore, the average of the Variance inflation factor is 
+
+## n) Visually check the assumptions related to the residuals using the plot() and hist() functions. Summarize what each graph is informing you of and if any anomalies are present.
+
+```{r echo=TRUE, include=TRUE}
+plot(mult_lm)
+
+hist(clean_housing_df$studentized.residuals)
+
+```
+
+
+
+## o) Overall, is this regression model unbiased? If an unbiased regression model, what does this tell us about the sample vs. the entire population model?
+
+I don't think the model is biased. This means it should be pretty good at making predictions and also somewhat reflects what you might actual found out in society.
+
